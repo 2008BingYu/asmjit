@@ -26,19 +26,32 @@ jobs:
             -DANDROID_ABI=${{ matrix.abi }} \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF
+            -DASMJIT_BUILD_LIBRARY=ON \
+            -DASMJIT_BUILD_TEST=OFF \
+            -DASMJIT_BUILD_TOOLS=OFF
           make -j$(nproc)
-          # 查找并显示生成的文件
-          echo "=== Generated files ==="
+          
+          # 显示所有 .a 文件
+          echo "=== all .a files ==="
           find . -name "*.a" -type f
-          echo "======================"
-          # 复制到输出目录
-          mkdir -p ${{ github.workspace }}/output/${{ matrix.abi }}
-          find . -name "*.a" -exec cp {} ${{ github.workspace }}/output/${{ matrix.abi }}/ \;
+          echo "==================="
+          
+          # 创建输出目录
+          mkdir -p ${{ github.workspace }}/output
+          
+          # 复制 .a 文件（如果有的话）
+          find . -name "*.a" -exec cp {} ${{ github.workspace }}/output/${{ matrix.abi }}.a \;
+          
+          # 如果没有 .a 文件，尝试找 .o 文件
+          if [ ! -f ${{ github.workspace }}/output/${{ matrix.abi }}.a ]; then
+            echo "No .a found, looking for .o files..."
+            find . -name "*.o" -type f | head -10
+          fi
+          
           cd ..
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: asmjit-${{ matrix.abi }}
-          path: output/${{ matrix.abi }}/*.a
+          path: output/*.a
