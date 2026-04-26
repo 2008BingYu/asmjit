@@ -8,9 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          repository: asmjit/asmjit
-          ref: master
 
       - name: Setup Android NDK
         run: |
@@ -18,23 +15,9 @@ jobs:
           unzip android-ndk-r26d-linux.zip
           echo "ANDROID_NDK=$PWD/android-ndk-r26d" >> $GITHUB_ENV
 
-      - name: Build Android armeabi-v7a
+      - name: Build arm64-v8a
         run: |
-          mkdir build-v7a && cd build-v7a
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=armeabi-v7a \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF
-          make -j$(nproc)
-          # 检查生成的文件
-          ls -la asmjit/
-          cd ..
-
-      - name: Build Android arm64-v8a
-        run: |
-          mkdir build-v8a && cd build-v8a
+          mkdir build && cd build
           cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
@@ -44,125 +27,16 @@ jobs:
           make -j$(nproc)
           cd ..
 
-      - name: Build Android x86
+      - name: Prepare package
         run: |
-          mkdir build-x86 && cd build-x86
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=x86 \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF
-          make -j$(nproc)
-          cd ..
-
-      - name: Build Android x86_64
-        run: |
-          mkdir build-x86_64 && cd build-x86_64
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=x86_64 \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF
-          make -j$(nproc)
-          cd ..
-
-      - name: Prepare release package
-        run: |
-          mkdir -p asmjit-release/lib/armeabi-v7a
-          mkdir -p asmjit-release/lib/arm64-v8a
-          mkdir -p asmjit-release/lib/x86
-          mkdir -p asmjit-release/lib/x86_64
-          mkdir -p asmjit-release/include/asmjit
-          
-          # 关键：正确的路径是 build-xxx/asmjit/libasmjit.a
-          cp build-v7a/asmjit/libasmjit.a asmjit-release/lib/armeabi-v7a/
-          cp build-v8a/asmjit/libasmjit.a asmjit-release/lib/arm64-v8a/
-          cp build-x86/asmjit/libasmjit.a asmjit-release/lib/x86/
-          cp build-x86_64/asmjit/libasmjit.a asmjit-release/lib/x86_64/
-          
-          # 复制头文件（从源码目录）
-          cp -r asmjit asmjit-release/include/
+          mkdir -p release/lib/arm64-v8a
+          mkdir -p release/include/asmjit
+          cp build/src/asmjit/libasmjit.a release/lib/arm64-v8a/ 2>/dev/null || \
+          cp build/asmjit/libasmjit.a release/lib/arm64-v8a/ 2>/dev/null || \
+          find build -name "*.a" -exec cp {} release/lib/arm64-v8a/ \;
+          cp -r asmjit release/include/
 
       - uses: actions/upload-artifact@v4
         with:
-          name: asmjit-android-all
-          path: asmjit-release/          find . -name "*.a" -exec cp {} lib/ \;
-          cd ..
-
-      - name: Build Android arm64-v8a
-        run: |
-          mkdir build-v8a && cd build-v8a
-          
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=arm64-v8a \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${PWD}/lib
-          
-          make -j$(nproc)
-          
-          mkdir -p lib
-          find . -name "*.a" -exec cp {} lib/ \;
-          cd ..
-
-      - name: Build Android x86
-        run: |
-          mkdir build-x86 && cd build-x86
-          
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=x86 \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${PWD}/lib
-          
-          make -j$(nproc)
-          
-          mkdir -p lib
-          find . -name "*.a" -exec cp {} lib/ \;
-          cd ..
-
-      - name: Build Android x86_64
-        run: |
-          mkdir build-x86_64 && cd build-x86_64
-          
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=x86_64 \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY=${PWD}/lib
-          
-          make -j$(nproc)
-          
-          mkdir -p lib
-          find . -name "*.a" -exec cp {} lib/ \;
-          cd ..
-
-      - name: Prepare release package
-        run: |
-          mkdir -p asmjit-release/lib/armeabi-v7a
-          mkdir -p asmjit-release/lib/arm64-v8a
-          mkdir -p asmjit-release/lib/x86
-          mkdir -p asmjit-release/lib/x86_64
-          mkdir -p asmjit-release/include/asmjit
-          
-          # 现在有明确的路径了
-          cp build-v7a/lib/*.a asmjit-release/lib/armeabi-v7a/
-          cp build-v8a/lib/*.a asmjit-release/lib/arm64-v8a/
-          cp build-x86/lib/*.a asmjit-release/lib/x86/
-          cp build-x86_64/lib/*.a asmjit-release/lib/x86_64/
-          
-          # 复制头文件
-          cp -r src/asmjit asmjit-release/include/
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: asmjit-android-all
-          path: asmjit-release/
+          name: asmjit-android-arm64
+          path: release/
