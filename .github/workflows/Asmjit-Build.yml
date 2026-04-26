@@ -21,81 +21,65 @@ jobs:
       - name: Build armeabi-v7a
         run: |
           mkdir build-v7a && cd build-v7a
-          
           cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=armeabi-v7a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=./install \
             -DASMJIT_BUILD_X86=OFF \
             -DASMJIT_BUILD_ARM=ON \
             -DASMJIT_BUILD_HOST=OFF \
             -DASMJIT_BUILD_TEST=OFF \
             -DASMJIT_BUILD_TOOLS=OFF
-          
           make -j$(nproc)
-          make install
           cd ..
 
       - name: Build arm64-v8a
         run: |
           mkdir build-v8a && cd build-v8a
-          
           cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=./install \
             -DASMJIT_BUILD_X86=OFF \
             -DASMJIT_BUILD_ARM=ON \
             -DASMJIT_BUILD_HOST=OFF \
             -DASMJIT_BUILD_TEST=OFF \
             -DASMJIT_BUILD_TOOLS=OFF
-          
           make -j$(nproc)
-          make install
           cd ..
 
       - name: Build x86
         run: |
           mkdir build-x86 && cd build-x86
-          
           cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=x86 \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=./install \
             -DASMJIT_BUILD_X86=ON \
             -DASMJIT_BUILD_ARM=OFF \
             -DASMJIT_BUILD_HOST=OFF \
             -DASMJIT_BUILD_TEST=OFF \
             -DASMJIT_BUILD_TOOLS=OFF
-          
           make -j$(nproc)
-          make install
           cd ..
 
       - name: Build x86_64
         run: |
           mkdir build-x86_64 && cd build-x86_64
-          
           cmake .. \
             -DCMAKE_TOOLCHAIN_FILE=${ANDROID_NDK}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=x86_64 \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_INSTALL_PREFIX=./install \
             -DASMJIT_BUILD_X86=ON \
             -DASMJIT_BUILD_ARM=OFF \
             -DASMJIT_BUILD_HOST=OFF \
             -DASMJIT_BUILD_TEST=OFF \
             -DASMJIT_BUILD_TOOLS=OFF
-          
           make -j$(nproc)
-          make install
           cd ..
 
       - name: Prepare release package
@@ -106,12 +90,14 @@ jobs:
           mkdir -p asmjit-release/lib/x86_64
           mkdir -p asmjit-release/include/asmjit
           
-          cp build-v7a/install/lib/libasmjit.a asmjit-release/lib/armeabi-v7a/
-          cp build-v8a/install/lib/libasmjit.a asmjit-release/lib/arm64-v8a/
-          cp build-x86/install/lib/libasmjit.a asmjit-release/lib/x86/
-          cp build-x86_64/install/lib/libasmjit.a asmjit-release/lib/x86_64/
+          # 直接从编译目录复制 .a 文件（正确路径）
+          cp build-v7a/src/asmjit/libasmjit.a asmjit-release/lib/armeabi-v7a/
+          cp build-v8a/src/asmjit/libasmjit.a asmjit-release/lib/arm64-v8a/
+          cp build-x86/src/asmjit/libasmjit.a asmjit-release/lib/x86/
+          cp build-x86_64/src/asmjit/libasmjit.a asmjit-release/lib/x86_64/
           
-          cp -r build-v8a/install/include/asmjit asmjit-release/include/
+          # 从源码复制头文件
+          cp -r src/asmjit asmjit-release/include/
 
       - uses: actions/upload-artifact@v4
         with:
