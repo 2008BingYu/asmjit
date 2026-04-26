@@ -25,6 +25,9 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF
           make -j$(nproc)
+          # 确保能找到输出
+          mkdir -p output
+          find . -name "*.a" -exec cp {} output/ \;
           cd ..
 
       - name: Build arm64-v8a
@@ -37,6 +40,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF
           make -j$(nproc)
+          mkdir -p output
+          find . -name "*.a" -exec cp {} output/ \;
           cd ..
 
       - name: Build x86
@@ -49,6 +54,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF
           make -j$(nproc)
+          mkdir -p output
+          find . -name "*.a" -exec cp {} output/ \;
           cd ..
 
       - name: Build x86_64
@@ -61,22 +68,23 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_SHARED_LIBS=OFF
           make -j$(nproc)
+          mkdir -p output
+          find . -name "*.a" -exec cp {} output/ \;
           cd ..
 
       - name: Prepare release package
         run: |
-          # 创建目录结构
           mkdir -p release/lib/armeabi-v7a
           mkdir -p release/lib/arm64-v8a
           mkdir -p release/lib/x86
           mkdir -p release/lib/x86_64
           mkdir -p release/include/asmjit
           
-          # 复制各架构的库文件（自动查找正确路径）
-          find build-v7a -name "*.a" -exec cp {} release/lib/armeabi-v7a/ \;
-          find build-v8a -name "*.a" -exec cp {} release/lib/arm64-v8a/ \;
-          find build-x86 -name "*.a" -exec cp {} release/lib/x86/ \;
-          find build-x86_64 -name "*.a" -exec cp {} release/lib/x86_64/ \;
+          # 从 output 目录复制
+          cp build-v7a/output/*.a release/lib/armeabi-v7a/ 2>/dev/null || echo "v7a not found"
+          cp build-v8a/output/*.a release/lib/arm64-v8a/ 2>/dev/null || echo "v8a not found"
+          cp build-x86/output/*.a release/lib/x86/ 2>/dev/null || echo "x86 not found"
+          cp build-x86_64/output/*.a release/lib/x86_64/ 2>/dev/null || echo "x86_64 not found"
           
           # 复制头文件
           cp -r asmjit release/include/
@@ -84,9 +92,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: asmjit-android-all
-          path: release/          cp -r asmjit release/include/
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: asmjit-android-arm64
           path: release/
