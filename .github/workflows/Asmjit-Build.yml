@@ -1,4 +1,4 @@
-name: Build Asmjit Static Library for Android
+name: Build Asmjit Static Library for Android (All in One)
 
 on:
   workflow_dispatch:
@@ -6,9 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        abi: [armeabi-v7a, arm64-v8a, x86, x86_64]
     steps:
       - uses: actions/checkout@v4
 
@@ -18,29 +15,35 @@ jobs:
           unzip android-ndk-r26d-linux.zip
           echo "NDK=$PWD/android-ndk-r26d" >> $GITHUB_ENV
 
-      - name: Build for ${{ matrix.abi }}
+      - name: Build for all architectures
         run: |
-          mkdir build && cd build
-          cmake .. \
-            -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
-            -DANDROID_ABI=${{ matrix.abi }} \
-            -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DASMJIT_STATIC=ON \
-            -DASMJIT_BUILD_TEST=OFF \
-            -DASMJIT_BUILD_TOOLS=OFF
-          make -j$(nproc)
+          # 创建最终输出目录
+          mkdir -p release/include
           
-          echo "=== all .a files ==="
-          find . -name "*.a" -type f
-          echo "==================="
+          # 复制头文件（只需一次）
+          cp -r asmjit release/include/
           
-          mkdir -p ${{ github.workspace }}/output
-          find . -name "*.a" -exec cp {} ${{ github.workspace }}/output/${{ matrix.abi }}.a \;
-          cd ..
+          # 编译每个架构
+          for abi in armeabi-v7a arm64-v8a x86 x86_64; do
+            echo "=== Building for $abi ==="
+            mkdir build-$abi && cd build-$abi
+            cmake .. \
+              -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
+              -DANDROID_ABI=$abi \
+              -DANDROID_PLATFORM=android-24 \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DASMJIT_STATIC=ON \
+              -DASMJIT_BUILD_TEST=OFF
+            make -j$(nproc)
+            
+            # 创建架构目录并复制库
+            mkdir -p ../release/lib/$abi
+            find . -name "*.a" -exec cp {} ../release/lib/$abi/libasmjit.a \;
+            cd ..
+          done
 
-      - name: Upload artifacts
+      - name: Upload complete package
         uses: actions/upload-artifact@v4
         with:
-          name: asmjit-static-${{ matrix.abi }}
-          path: output/*.a
+          name: asmjit-android-all
+          path: release/
