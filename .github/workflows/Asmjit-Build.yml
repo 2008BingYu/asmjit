@@ -25,25 +25,25 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=${NDK}/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=${{ matrix.abi }} \
             -DANDROID_PLATFORM=android-24 \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_SHARED_LIBS=OFF \
-            -DASMJIT_BUILD_LIBRARY=ON \
-            -DASMJIT_BUILD_TEST=OFF \
-            -DASMJIT_BUILD_TOOLS=OFF
+            -DCMAKE_BUILD_TYPE=Release
           make -j$(nproc)
           
-          echo "=== all .a files ==="
-          find . -name "*.a" -type f
-          echo "==================="
+          echo "=== all .so files ==="
+          find . -name "*.so" -type f
+          echo "====================="
           
+          # 创建输出目录
           mkdir -p ${{ github.workspace }}/output
           
-          # 复制 .a 文件
-          find . -name "*.a" -exec cp {} ${{ github.workspace }}/output/${{ matrix.abi }}.a \;
+          # 复制 .so 文件
+          find . -name "*.so" -exec cp {} ${{ github.workspace }}/output/${{ matrix.abi }}.so \;
+          
+          # 显示复制结果
+          ls -la ${{ github.workspace }}/output/
           cd ..
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: asmjit-${{ matrix.abi }}
-          path: output/*.a
+          path: output/*.so
